@@ -1,0 +1,84 @@
+import java.nio.file.Files
+import java.util.stream.Collectors
+
+buildscript {
+    repositories {
+        maven {
+            url 'http://dl.bintray.com/vorpal-research/kotlin-maven'
+        }
+    }
+    dependencies {
+        classpath 'org.jetbrains.research:kfirst-runner-gradle-plugin:0.1.17.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.61'
+}
+
+group 'ru.spbstu'
+version '0.0.1-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testCompile "org.jetbrains.kotlin:kotlin-test"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit5"
+    testCompile "org.junit.jupiter:junit-jupiter-api:5.2.0"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:5.2.0"
+    testRuntime "org.junit.vintage:junit-vintage-engine:4.12.0"
+    testRuntime "org.junit.platform:junit-platform-launcher:1.0.0"
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+test {
+    useJUnitPlatform()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['test']
+        }
+    }
+}
+
+apply plugin: org.jetbrains.research.runner.KFirstRunnerPlugin
+
+task kotoedRun(
+        type: org.jetbrains.research.runner.KFirstRunnerTask,
+        dependsOn: ['clean', 'testClasses']) {
+    def testPackages = sourceSets['test'].java.srcDirs.stream()
+            .flatMap {
+                dir -> Files.walk(dir.toPath())
+                            .map { it.toFile() }
+                            .filter { it.isDirectory() }
+                            .map { it.path }
+                            .map { it.substring(dir.path.length()) }
+            }
+            .filter { !it.isEmpty() }
+            .map { it.substring(1) }
+            .map { it.replace('/', '.').replace('\\', '.') }
+            .collect(Collectors.toList())
+            .sort()
+    packages = testPackages
+}
